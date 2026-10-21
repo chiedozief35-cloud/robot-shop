@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: robot-shop-homepage
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  jobName: robot-shop-availability
+  interval: 30s
+  scrapeTimeout: 10s
+  module: robot_shop_http
+  prober:
+    url: prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+    scheme: http
+    path: /probe
+  targets:
+    staticConfig:
+      static:
+        - http://web.robot-shop.svc.cluster.local:8080/
+      labels:
+        service: web
+        slo: robot-shop-homepage

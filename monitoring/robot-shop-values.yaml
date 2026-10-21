@@ -1,0 +1,7 @@
+payment:
+  image: ghcr.io/chiedozief35-cloud/robot-shop-payment@sha256:2e253e15df384111c5a1600e99e64c83ce133d157221ad902b24f27910a1f8a0
+  extraEnv:
+    - name: OTEL_SERVICE_NAME
+      value: payment
+    - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+      value: http://otel-collector.tracing.svc.cluster.local:4318/v1/traces

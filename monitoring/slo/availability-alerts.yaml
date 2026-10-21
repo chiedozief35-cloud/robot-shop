@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: robot-shop-availability
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: robot-shop-availability
+      rules:
+        - alert: RobotShopHomepageUnavailable
+          expr: probe_success{slo="robot-shop-homepage"} == 0
+          for: 2m
+          labels:
+            namespace: monitoring
+            capstone: "true"
+            severity: critical
+          annotations:
+            summary: "Robot Shop homepage availability checks are failing"
+            description: "Checks have failed for at least two minutes. Inspect web pods, service endpoints, events, and recent changes. Restore service before investigating the root cause."
+
+        - alert: RobotShopAvailabilityMonitoringMissing
+          expr: absent_over_time(probe_success{slo="robot-shop-homepage"}[2m])
+          for: 1m
+          labels:
+            namespace: monitoring
+            capstone: "true"
+            severity: warning
+          annotations:
+            summary: "Robot Shop availability measurements are missing"
+            description: "Probe results are missing. Check Blackbox Exporter, Prometheus target discovery, and the Probe resource. Missing measurements do not establish that the application is healthy."

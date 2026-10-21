@@ -14,7 +14,7 @@ spec:
   {{ if .Values.nodeport }}
   type: NodePort
   {{ else }}
-  type: LoadBalancer
+  type: ClusterIP
   {{ end }}
 ---
 {{if .Values.ocCreateRoute}}

@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: capstone-slack
+  namespace: monitoring
+  labels:
+    alertmanagerConfig: capstone
+spec:
+  route:
+    receiver: capstone-slack
+    groupBy: [alertname]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 1h
+    matchers:
+      - name: capstone
+        value: "true"
+        matchType: "="
+  receivers:
+    - name: capstone-slack
+      slackConfigs:
+        - apiURL:
+            name: capstone-slack
+            key: webhook-url
+          channel: "#capstone-alerts"
+          sendResolved: true
+          title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+          text: |
+            {{ range .Alerts }}
+            {{ .Annotations.summary }}
+            {{ .Annotations.description }}
+            {{ end }}

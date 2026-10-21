@@ -1,6 +1,6 @@
 import random
 
-import instana
+from telemetry import configure_tracing
 import os
 import sys
 import time
@@ -9,7 +9,7 @@ import uuid
 import json
 import requests
 import traceback
-from flask import Flask
+from flask import Flask, g
 from flask import Response
 from flask import request
 from flask import jsonify
@@ -19,6 +19,7 @@ import prometheus_client
 from prometheus_client import Counter, Histogram
 
 app = Flask(__name__)
+configure_tracing(app)
 app.logger.setLevel(logging.INFO)
 
 CART = os.getenv('CART_HOST', 'cart')
@@ -30,6 +31,43 @@ PromMetrics = {}
 PromMetrics['SOLD_COUNTER'] = Counter('sold_count', 'Running count of items sold')
 PromMetrics['AUS'] = Histogram('units_sold', 'Avergae Unit Sale', buckets=(1, 2, 5, 10, 100))
 PromMetrics['AVS'] = Histogram('cart_value', 'Avergae Value Sale', buckets=(100, 200, 500, 1000, 2000, 5000, 10000))
+
+
+
+# HTTP metrics exported through the existing /metrics endpoint.
+PromMetrics['HTTP_REQUESTS'] = Counter(
+    'robot_shop_http_requests_total',
+    'Completed HTTP requests',
+    ['method', 'route', 'status']
+)
+PromMetrics['HTTP_DURATION'] = Histogram(
+    'robot_shop_http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'route'],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+)
+
+
+@app.before_request
+def start_request_timer():
+    g.request_started = time.perf_counter()
+
+
+@app.after_request
+def record_http_metrics(response):
+    # Exclude monitoring traffic from application request metrics.
+    if request.path not in ('/metrics', '/health'):
+        route = request.url_rule.rule if request.url_rule else 'unmatched'
+        PromMetrics['HTTP_REQUESTS'].labels(
+            method=request.method,
+            route=route,
+            status=str(response.status_code)
+        ).inc()
+        PromMetrics['HTTP_DURATION'].labels(
+            method=request.method,
+            route=route
+        ).observe(time.perf_counter() - g.request_started)
+    return response
 
 
 @app.errorhandler(Exception)
